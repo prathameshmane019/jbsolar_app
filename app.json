@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "jbsolar_app",
+    "name": "JB Solar Agent",
     "slug": "jbsolar_app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,11 +32,28 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow JB Solar Agent to capture installation evidence.",
+          "photosPermission": "Allow JB Solar Agent to select installation evidence.",
+          "microphonePermission": false
+        }
+      ],
+      "./plugins/with-local-api-http",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "edc77a28-c1a4-43f5-af43-321039d9b4d4"
+      }
     }
   }
 }

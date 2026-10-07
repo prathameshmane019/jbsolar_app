@@ -7,10 +7,14 @@
     "icon": "./assets/images/icon.png",
     "scheme": "jbsolarapp",
     "userInterfaceStyle": "automatic",
+
     "ios": {
+      "bundleIdentifier": "com.jbsolar.agent",
       "icon": "./assets/expo.icon"
     },
+
     "android": {
+      "package": "com.jbsolar.agent",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -19,10 +23,12 @@
       },
       "predictiveBackGestureEnabled": false
     },
+
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -45,10 +51,12 @@
       "./plugins/with-local-api-http",
       "expo-sharing"
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
+
     "extra": {
       "router": {},
       "eas": {

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "JB Solar Agent",
-    "slug": "jbsolar_app",
+    "slug": "jb-solar-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

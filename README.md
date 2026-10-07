@@ -1,56 +1,40 @@
-# Welcome to your Expo app 👋
+# JB Solar Agent
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo Router mobile app for vendor agents. Authentication and field workflows use the JB Solar Spring Boot API; no demo credentials or local mock records are included.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run locally
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The default API URL targets the local Spring Boot server on port `8080`:
 
-### Other setup steps
+- Android emulator: `http://10.0.2.2:8080/api/v1`
+- iOS simulator and web: `http://localhost:8080/api/v1`
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+When running through Expo Go from the Expo CLI in LAN mode, the app reads the Metro host address from Expo Constants and uses that computer's LAN IP for port `8080`. This works for a physical Android/iOS device as long as the phone and computer are on the same Wi-Fi. The Android emulator's `10.0.2.2` and `localhost` are not addresses a physical phone can use.
 
-## Learn more
+If Expo is started in tunnel mode, or the backend is on a different host, set `EXPO_PUBLIC_API_URL` to a reachable URL including `/api/v1`, for example `http://192.168.1.20:8080/api/v1`, then restart Expo with a cleared cache (`npx expo start --clear`). Verify phone-to-backend connectivity by opening `http://<computer-lan-ip>:8080/v3/api-docs` in the phone browser. The backend must listen on a network interface (not only `127.0.0.1`) and the computer firewall must allow inbound TCP `8080`.
 
-To learn more about developing your project with Expo, look at the following resources:
+The local config plugin permits HTTP for generated development builds; config plugins do not modify the Expo Go app itself. Use HTTPS outside local development.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Agents sign in with their registered mobile number and password. Only API responses with role `VENDOR_AGENT` are accepted. Native builds store access tokens in Expo SecureStore. Expo SecureStore does not support web, so browser sessions are kept in memory only and require signing in again after a page refresh.
 
-## Join the community
+## Current backend workflow support
 
-Join our community of developers creating universal apps.
+The app uses the live API for vendor-agent login, agent/company profile, farmer search and registration, active policy plans, and policy creation. Policy requests include the pump-set specifications `pumpPowerHp` and `motorHeadMeters`; the API does not expose a separate pump-registration endpoint.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+After creating a policy, agents capture or select a customer-signature image and pump-set image. Images are resized to a maximum 1600-pixel dimension and JPEG-compressed on-device before upload. The app validates the backend-issued HTTPS upload URL, refuses redirects, and verifies the completion metadata. Image bytes go directly to the signed object-storage URL; the backend associates the resulting file with the policy without receiving the image body. Verify that the backend’s R2 credentials, bucket, and CORS/upload configuration are set for the deployed environment.
+
+The current payment API exposes a `dummy-order` endpoint and server-side `simulate-success` test operation, not a production checkout integration. The app labels and uses this as a test flow; do not use it as a production payment method. After backend-confirmed payment, the app retrieves the policy and invoice metadata, then creates a PDF from that verified invoice data. Invoice PDFs have separate share and save-to-folder actions; saved filenames include a unique suffix to avoid collisions when an invoice is downloaded more than once. The signed-in app uses a bottom navigation bar for Home, Policies, and Profile. Policies can be opened for details, and existing pending policies can be resumed from the farmer's pump details step.
+
+Farmers are searched by 12-digit Aadhaar number. New registrations require a numeric Aadhaar number and mobile number. The customer consent signature is drawn on the in-app signature pad; the pump-set evidence must be captured with the camera.
+
+## Validation
+
+```bash
+npx tsc --noEmit
+npx expo lint
+```

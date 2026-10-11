@@ -61,7 +61,8 @@ export default function ProfileScreen() {
       },
     ]);
   };
-
+ 
+console.log(profileQuery)
   const getInitials = (name?: string) => {
     if (!name) return 'AG';
     const parts = name.trim().split(/\s+/);
@@ -145,7 +146,7 @@ export default function ProfileScreen() {
                 </HStack>
                 <VStack space="sm" style={styles.detailGrid}>
                   <Detail label="Registered Mobile" value={profileQuery.data.mobile} />
-                  <Detail label="User ID" value={profileQuery.data.userId} />
+                  <Detail label="User ID" value={profileQuery.data.agentCode} />
                   <Detail label="Account Status" value={profileQuery.data.status} />
                 </VStack>
               </Card>
@@ -160,26 +161,10 @@ export default function ProfileScreen() {
                 </HStack>
                 <VStack space="sm" style={styles.detailGrid}>
                   <Detail label="Vendor Company" value={profileQuery.data.vendorName} />
-                  <Detail label="Vendor ID" value={profileQuery.data.vendorId} />
-                  <Detail label="Service Domain" value="Solar Pumping & Maintenance" />
+                  <Detail label="Vendor ID" value={profileQuery.data.vendorCode} /> 
                 </VStack>
               </Card>
 
-              {/* App Info Card */}
-              <Card style={styles.card}>
-                <VStack space="xs">
-                  <HStack justifyContent="space-between">
-                    <Text style={styles.detailLabel}>Connected Endpoint</Text>
-                    <Text style={styles.detailValueSmall} numberOfLines={1}>
-                      {apiBaseUrl}
-                    </Text>
-                  </HStack>
-                  <HStack justifyContent="space-between">
-                    <Text style={styles.detailLabel}>Client Version</Text>
-                    <Text style={styles.detailValueSmall}>1.0.0 (Production Build)</Text>
-                  </HStack>
-                </VStack>
-              </Card>
 
               {/* Logout Button */}
               <Button onPress={handleLogout} style={styles.logoutButton}>

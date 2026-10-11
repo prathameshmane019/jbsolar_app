@@ -11,9 +11,11 @@ export type LoginResponse = {
 
 export type AgentProfile = {
   id: string;
+  agentCode: string;
   userId: string;
   vendorId: string;
   vendorName: string;
+  vendorCode: string;
   fullName: string;
   mobile: string;
   status: 'ACTIVE' | 'INACTIVE';
@@ -45,6 +47,7 @@ export type FarmerRequest = {
 
 export type PolicyPlan = {
   id: string;
+  planCode: string;
   name: string;
   description: string;
   durationMonths: number;
@@ -55,7 +58,9 @@ export type PolicyPlan = {
 };
 
 export type Policy = {
+  planId: string;
   id: string;
+  customerCode: string;
   policyNumber: string;
   farmerId: string;
   farmerName: string;
@@ -66,6 +71,7 @@ export type Policy = {
   endDate: string;
   amount: number;
   gstAmount: number;
+  agentId:string;
   totalAmount: number;
   status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
   pumpPowerHp: number;

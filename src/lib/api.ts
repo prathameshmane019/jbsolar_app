@@ -61,6 +61,11 @@ export const api = create({
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
+  console.log(
+  `[API REQUEST] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+);
+
+console.log('[API BODY]', config.data);
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -72,9 +77,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+
     if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
       try {
         await useAuthStore.getState().logout();
+
       } catch (storageError) {
         console.error('Could not remove the expired agent session.', storageError);
       }
@@ -92,7 +99,7 @@ export function getApiErrorMessage(error: unknown): string {
       return `The server request timed out. Please check your connection and try again.`;
     }
 
-    const responseData = error.response?.data;
+    const responseData = error.response?.data; 
     if (typeof responseData === 'object' && responseData !== null) {
       const details = responseData as { message?: unknown; detail?: unknown; error?: unknown };
       const message = details.message ?? details.detail ?? details.error;
@@ -152,14 +159,32 @@ export async function createPolicy(payload: {
   vendorId?: string;
   pumpPowerHp: number;
   motorHeadMeters: number;
+  agentId?: string;
 }): Promise<Policy> {
   const { data } = await api.post<Policy>('/policies', payload);
+  console.log('Created policy:', data);
+  console.log(payload)
   return data;
 }
 
 export async function getPolicy(policyId: string): Promise<Policy> {
   const { data } = await api.get<Policy>(`/policies/${encodeURIComponent(policyId)}`);
   return data;
+}
+export type UpdatePolicyRequest = {
+  id: string;
+  farmerId: string;
+  policyPlanId: string;
+  startDate: string;
+  vendorId?: string;
+  agentId: string;
+  pumpPowerHp: number;
+  motorHeadMeters: number;
+};
+
+export async function updatePolicy({ id, ...body }: UpdatePolicyRequest): Promise<Policy> {
+  const response = await api.put<Policy>(`/policies/${id}`, body); // put, not patch
+  return response.data;
 }
 
 export async function getPolicies(): Promise<Policy[]> {

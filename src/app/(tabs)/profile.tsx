@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import * as Application from 'expo-application';
 import {
   ArrowLeftIcon,
   LogOutIcon,
@@ -145,7 +145,7 @@ export default function ProfileScreen() {
                 </HStack>
                 <VStack space="sm" style={styles.detailGrid}>
                   <Detail label="Registered Mobile" value={profileQuery.data.mobile} />
-                  <Detail label="User ID" value={profileQuery.data.userId} />
+                  <Detail label="User ID" value={profileQuery.data.agentCode} />
                   <Detail label="Account Status" value={profileQuery.data.status} />
                 </VStack>
               </Card>
@@ -160,26 +160,26 @@ export default function ProfileScreen() {
                 </HStack>
                 <VStack space="sm" style={styles.detailGrid}>
                   <Detail label="Vendor Company" value={profileQuery.data.vendorName} />
-                  <Detail label="Vendor ID" value={profileQuery.data.vendorId} />
-                  <Detail label="Service Domain" value="Solar Pumping & Maintenance" />
+                  <Detail label="Vendor ID" value={profileQuery.data.vendorCode} />
                 </VStack>
               </Card>
 
-              {/* App Info Card */}
-              <Card style={styles.card}>
-                <VStack space="xs">
-                  <HStack justifyContent="space-between">
-                    <Text style={styles.detailLabel}>Connected Endpoint</Text>
-                    <Text style={styles.detailValueSmall} numberOfLines={1}>
-                      {apiBaseUrl}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Check for app updates"
+                onPress={() => router.push('/update')}
+                style={({ pressed }) => [styles.updateRow, pressed && { opacity: 0.7 }]}
+              >
+                <HStack alignItems="center" justifyContent="space-between">
+                  <VStack space="xs">
+                    <Text style={styles.cardHeading}>App Updates</Text>
+                    <Text style={styles.detailLabel}>
+                      Version {Application.nativeApplicationVersion ?? '-'} • Tap to check
                     </Text>
-                  </HStack>
-                  <HStack justifyContent="space-between">
-                    <Text style={styles.detailLabel}>Client Version</Text>
-                    <Text style={styles.detailValueSmall}>1.0.0 (Production Build)</Text>
-                  </HStack>
-                </VStack>
-              </Card>
+                  </VStack>
+                  <Text style={styles.updateChevron}>›</Text>
+                </HStack>
+              </Pressable>
 
               {/* Logout Button */}
               <Button onPress={handleLogout} style={styles.logoutButton}>
@@ -206,6 +206,23 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  updateRow: {
+  borderRadius: 18,
+  padding: 18,
+  backgroundColor: AppColors.surface,
+  borderWidth: 1,
+  borderColor: AppColors.border,
+},
+updateChevron: {
+  color: AppColors.brand,
+  fontSize: 26,
+  fontWeight: '600',
+},
+updateButton: {
+  minHeight: 52,
+  borderRadius: 14,
+  borderColor: AppColors.brand,
+},
   safeArea: {
     flex: 1,
     backgroundColor: AppColors.bg,

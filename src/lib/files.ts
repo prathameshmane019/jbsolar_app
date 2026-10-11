@@ -5,8 +5,10 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { completeFileUpload, createFileUploadUrl } from '@/lib/api';
 import type { FileMetadata, PolicyFilePurpose } from '@/types';
 
-const maxFileSize = 10 * 1024 * 1024;
-const maxImageDimension = 1600;
+// top of file
+const maxFileSize = 10 * 1024 * 1024;      // keep: limit for the final upload
+const maxSourceSize = 40 * 1024 * 1024;    // new: raw camera originals can be large
+const maxImageDimension = 1280;            // was 1600
 
 export type LocalAttachment = {
   uri: string;
@@ -30,9 +32,10 @@ export async function optimizeImageForUpload(
   if (!source.exists) {
     throw new Error(`${attachment.name} is no longer available on this device. Select it again.`);
   }
-  if (source.size < 1 || source.size > maxFileSize) {
-    throw new Error('Choose an image smaller than 10 MB.');
-  }
+// in optimizeImageForUpload: check the original against the bigger limit
+if (source.size < 1 || source.size > maxSourceSize) {
+  throw new Error('Choose an image smaller than 40 MB.');
+}
 
   const manipulator = ImageManipulator.manipulate(attachment.uri);
   if (attachment.width && attachment.width > maxImageDimension) {
@@ -44,7 +47,7 @@ export async function optimizeImageForUpload(
   const rendered = await manipulator.renderAsync();
   const compressed = await rendered.saveAsync({
     format: SaveFormat.JPEG,
-    compress: 0.78,
+    compress: 0.5,
   });
   const compressedFile = new File(compressed.uri);
   if (!compressedFile.exists || compressedFile.size < 1 || compressedFile.size > maxFileSize) {

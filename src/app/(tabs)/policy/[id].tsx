@@ -1,12 +1,9 @@
 import {
   Button,
-  ButtonText,
-  Card,
-  Heading,
-  HStack,
+  ButtonText, 
+  Heading, 
   ScrollView,
-  Text,
-  VStack,
+  Text, 
 } from '@gluestack-ui/themed';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -290,7 +287,7 @@ export default function PolicyDetailsScreen() {
             {/* Customer Information */}
             <Section title="Customer Information" icon={<UserIcon size={16} color={AppColors.brand} strokeWidth={2.2} />}>
               <DetailItem label="Farmer Name" value={policy.farmerName} highlight />
-              <DetailItem label="Customer Reference" value={policy.farmerId} />
+              <DetailItem label="Customer Reference" value={policy.customerCode} />
             </Section>
 
             {/* Pump Specifications */}

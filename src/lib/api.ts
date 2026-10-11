@@ -40,7 +40,7 @@ function getExpoHost(): string | null {
 }
 
 function getDefaultApiBaseUrl(): string {
-  if (Platform.OS === 'web') return 'http://localhost:8080/api/v1';
+  // if (Platform.OS === 'web') return 'http://localhost:8080/api/v1';
 
   const expoHost = getExpoHost();
   if (expoHost) return `http://${expoHost}:8080/api/v1`;
@@ -50,9 +50,13 @@ function getDefaultApiBaseUrl(): string {
     : 'http://localhost:8080/api/v1';
 }
 
-export const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '') || getDefaultApiBaseUrl();
+ const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
+export const apiBaseUrl = (envUrl || getDefaultApiBaseUrl()).replace(/\/+$/, '');
+
+if (__DEV__) {
+  console.log(`API base URL: ${apiBaseUrl} (${envUrl ? 'from .env' : 'auto-detected fallback'})`);
+}
 export const api = create({
   baseURL: apiBaseUrl,
   timeout: 20000,
@@ -61,7 +65,7 @@ export const api = create({
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-
+ 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -72,9 +76,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+
     if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
       try {
         await useAuthStore.getState().logout();
+
       } catch (storageError) {
         console.error('Could not remove the expired agent session.', storageError);
       }
@@ -92,7 +98,7 @@ export function getApiErrorMessage(error: unknown): string {
       return `The server request timed out. Please check your connection and try again.`;
     }
 
-    const responseData = error.response?.data;
+    const responseData = error.response?.data; 
     if (typeof responseData === 'object' && responseData !== null) {
       const details = responseData as { message?: unknown; detail?: unknown; error?: unknown };
       const message = details.message ?? details.detail ?? details.error;
@@ -152,14 +158,31 @@ export async function createPolicy(payload: {
   vendorId?: string;
   pumpPowerHp: number;
   motorHeadMeters: number;
+  agentId?: string;
 }): Promise<Policy> {
   const { data } = await api.post<Policy>('/policies', payload);
+ 
   return data;
 }
 
 export async function getPolicy(policyId: string): Promise<Policy> {
   const { data } = await api.get<Policy>(`/policies/${encodeURIComponent(policyId)}`);
   return data;
+}
+export type UpdatePolicyRequest = {
+  id: string;
+  farmerId: string;
+  policyPlanId: string;
+  startDate: string;
+  vendorId?: string;
+  agentId: string;
+  pumpPowerHp: number;
+  motorHeadMeters: number;
+};
+
+export async function updatePolicy({ id, ...body }: UpdatePolicyRequest): Promise<Policy> {
+  const response = await api.put<Policy>(`/policies/${id}`, body); // put, not patch
+  return response.data;
 }
 
 export async function getPolicies(): Promise<Policy[]> {

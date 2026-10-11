@@ -40,7 +40,7 @@ function getExpoHost(): string | null {
 }
 
 function getDefaultApiBaseUrl(): string {
-  if (Platform.OS === 'web') return 'http://localhost:8080/api/v1';
+  // if (Platform.OS === 'web') return 'http://localhost:8080/api/v1';
 
   const expoHost = getExpoHost();
   if (expoHost) return `http://${expoHost}:8080/api/v1`;
@@ -50,9 +50,13 @@ function getDefaultApiBaseUrl(): string {
     : 'http://localhost:8080/api/v1';
 }
 
-export const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '') || getDefaultApiBaseUrl();
+ const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
+export const apiBaseUrl = (envUrl || getDefaultApiBaseUrl()).replace(/\/+$/, '');
+
+if (__DEV__) {
+  console.log(`API base URL: ${apiBaseUrl} (${envUrl ? 'from .env' : 'auto-detected fallback'})`);
+}
 export const api = create({
   baseURL: apiBaseUrl,
   timeout: 20000,
@@ -61,12 +65,7 @@ export const api = create({
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-  console.log(
-  `[API REQUEST] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-);
-
-console.log('[API BODY]', config.data);
-
+ 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -162,8 +161,7 @@ export async function createPolicy(payload: {
   agentId?: string;
 }): Promise<Policy> {
   const { data } = await api.post<Policy>('/policies', payload);
-  console.log('Created policy:', data);
-  console.log(payload)
+ 
   return data;
 }
 

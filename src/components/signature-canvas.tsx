@@ -1,7 +1,12 @@
 import { Button, ButtonText, HStack, Text } from '@gluestack-ui/themed';
 import { File, Paths } from 'expo-file-system';
-import { useMemo, useState } from 'react';
-import { PanResponder, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { CheckIcon, CloseIcon, SignatureIcon } from '@/components/ui/icons';
@@ -11,12 +16,7 @@ import type { LocalAttachment } from '@/lib/files';
 const canvasWidth = 320;
 const canvasHeight = 170;
 
-function pointPath(
-  x: number,
-  y: number,
-  startsStroke: boolean,
-  displayWidth: number,
-): string {
+function pointPath(x: number, y: number, startsStroke: boolean, displayWidth: number): string {
   const pointX = Math.min(
     canvasWidth,
     Math.max(0, (x * canvasWidth) / Math.max(1, displayWidth)),
@@ -25,58 +25,106 @@ function pointPath(
   return `${startsStroke ? 'M' : 'L'} ${pointX} ${pointY}`;
 }
 
-export function SignatureCanvas({
-  disabled,
-  onSave,
-}: {
-  disabled: boolean;
-  onSave: (attachment: LocalAttachment) => void;
-}) {
-  const [strokes, setStrokes] = useState<string[]>([]);
-  const [activeStroke, setActiveStroke] = useState('');
-  const [displayWidth, setDisplayWidth] = useState(canvasWidth);
-  const onCanvasLayout = (event: LayoutChangeEvent) =>
-    setDisplayWidth(event.nativeEvent.layout.width);
+type LiveStrokeHandle = { set: (path: string) => void };
 
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !disabled,
-        onMoveShouldSetPanResponder: () => !disabled,
-        onPanResponderGrant: (event) => {
-          setActiveStroke(
-            pointPath(
-              event.nativeEvent.locationX,
-              event.nativeEvent.locationY,
-              true,
-              displayWidth,
-            ),
-          );
-        },
-        onPanResponderMove: (event) => {
-          const point = pointPath(
-            event.nativeEvent.locationX,
-            event.nativeEvent.locationY,
-            false,
-            displayWidth,
-          );
-          setActiveStroke((current) => (current ? `${current} ${point}` : ''));
-        },
-        onPanResponderRelease: () => {
-          if (activeStroke) {
-            setStrokes((current) => [...current, activeStroke]);
-          }
-          setActiveStroke('');
-        },
-        onPanResponderTerminate: () => setActiveStroke(''),
-      }),
-    [activeStroke, disabled, displayWidth],
+/**
+ * Owns the in-progress stroke. Only this tiny component re-renders while drawing,
+ * so the rest of the tree (buttons, icons, placeholder) is untouched at ~60fps.
+ */
+const LiveStroke = forwardRef<LiveStrokeHandle>(function LiveStroke(_props, ref) {
+  const [path, setPath] = useState('');
+  useImperativeHandle(ref, () => ({ set: setPath }), []);
+  if (!path) return null;
+  return (
+    <Path
+      d={path}
+      fill="none"
+      stroke="#163b2d"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
+});
+
+export function SignatureCanvas({
+  disabled = false,
+  onSave,
+  onDrawStart,
+  onDrawEnd,
+}: {
+  disabled?: boolean;
+  onSave: (attachment: LocalAttachment) => void;
+  /** Fired when a stroke starts / ends — use it to freeze a parent ScrollView. */
+  onDrawStart?: () => void;
+  onDrawEnd?: () => void;
+}) {
+  const [strokes, setStrokes] = useState<string[]>([]); // finished strokes
+  const [isDrawing, setIsDrawing] = useState(false); // flips only at stroke start / end
+
+  // Refs are only touched inside touch handlers, rAF callbacks and effects — never while rendering.
+  const liveRef = useRef<LiveStrokeHandle>(null);
+  const pointsRef = useRef('');
+  const rafRef = useRef<number | null>(null);
+  const widthRef = useRef(canvasWidth);
+
+  useEffect(
+    () => () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    },
+    [],
   );
 
-  const hasDrawing = strokes.length > 0 || Boolean(activeStroke);
+  const cancelFlush = () => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  };
+
+  // Push the in-progress stroke to <LiveStroke/> at most once per frame.
+  const flush = () => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      liveRef.current?.set(pointsRef.current);
+    });
+  };
+
+  const handleTouchStart = (event: GestureResponderEvent) => {
+    const { locationX: x, locationY: y } = event.nativeEvent;
+    // "M x y L x y" so a single tap still draws a dot (round line cap)
+    pointsRef.current = `${pointPath(x, y, true, widthRef.current)} ${pointPath(x, y, false, widthRef.current)}`;
+    setIsDrawing(true);
+    onDrawStart?.();
+    flush();
+  };
+
+  const handleTouchMove = (event: GestureResponderEvent) => {
+    if (!pointsRef.current) return;
+    const { locationX: x, locationY: y } = event.nativeEvent;
+    pointsRef.current += ` ${pointPath(x, y, false, widthRef.current)}`;
+    flush();
+  };
+
+  const handleTouchEnd = () => {
+    cancelFlush();
+    const stroke = pointsRef.current;
+    pointsRef.current = '';
+    liveRef.current?.set('');
+    if (stroke) setStrokes((current) => [...current, stroke]);
+    setIsDrawing(false);
+    onDrawEnd?.();
+  };
+
+  const onCanvasLayout = (event: LayoutChangeEvent) => {
+    widthRef.current = event.nativeEvent.layout.width;
+  };
+
+  const hasDrawing = strokes.length > 0 || isDrawing;
 
   const saveSignature = () => {
-    const allStrokes = [...strokes, activeStroke].filter(Boolean);
+    const allStrokes = strokes;
     if (!allStrokes.length) return;
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}"><rect width="100%" height="100%" fill="#ffffff"/><g fill="none" stroke="#163b2d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${allStrokes
@@ -98,29 +146,47 @@ export function SignatureCanvas({
     });
   };
 
+  const clearPad = () => {
+    cancelFlush();
+    pointsRef.current = '';
+    liveRef.current?.set('');
+    setIsDrawing(false);
+    setStrokes([]);
+  };
+
   return (
     <View style={styles.container}>
       <View
-        {...responder.panHandlers}
+        onStartShouldSetResponder={() => !disabled}
+        onResponderTerminationRequest={() => false} // don't let the ScrollView steal the touch
+        onResponderGrant={handleTouchStart}
+        onResponderMove={handleTouchMove}
+        onResponderRelease={handleTouchEnd}
+        onResponderTerminate={handleTouchEnd}
         onLayout={onCanvasLayout}
         style={[styles.canvas, disabled && styles.canvasDisabled]}
         accessibilityLabel="Customer signature drawing canvas"
         accessibilityRole="image"
       >
-        <Svg width="100%" height="100%" viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}>
-          {[...strokes, activeStroke]
-            .filter(Boolean)
-            .map((path, index) => (
-              <Path
-                key={`${index}-${path.length}`}
-                d={path}
-                fill="none"
-                stroke="#163b2d"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
+        {/* pointerEvents="none": touches must hit the canvas View, not the Svg child */}
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+          pointerEvents="none"
+        >
+          {strokes.map((path, index) => (
+            <Path
+              key={index}
+              d={path}
+              fill="none"
+              stroke="#163b2d"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+          <LiveStroke ref={liveRef} />
         </Svg>
         {!hasDrawing ? (
           <View pointerEvents="none" style={styles.placeholderContainer}>
@@ -135,10 +201,7 @@ export function SignatureCanvas({
         <Button
           variant="outline"
           isDisabled={disabled || !hasDrawing}
-          onPress={() => {
-            setStrokes([]);
-            setActiveStroke('');
-          }}
+          onPress={clearPad}
           style={styles.clearButton}
         >
           <HStack alignItems="center" space="xs">
@@ -163,9 +226,7 @@ export function SignatureCanvas({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginVertical: 4,
-  },
+  container: { marginVertical: 4 },
   canvas: {
     height: 170,
     borderWidth: 1.5,
@@ -176,10 +237,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  canvasDisabled: {
-    opacity: 0.6,
-    backgroundColor: '#f9fafb',
-  },
+  canvasDisabled: { opacity: 0.6, backgroundColor: '#f9fafb' },
   placeholderContainer: {
     position: 'absolute',
     top: 0,
@@ -203,29 +261,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#e5e7eb',
   },
-  actions: {
-    marginTop: 10,
-  },
-  clearButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 12,
-    borderColor: AppColors.border,
-  },
-  clearButtonText: {
-    color: AppColors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 2,
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: AppColors.brand,
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  actions: { marginTop: 10 },
+  clearButton: { flex: 1, minHeight: 44, borderRadius: 12, borderColor: AppColors.border },
+  clearButtonText: { color: AppColors.textMuted, fontSize: 13, fontWeight: '600' },
+  saveButton: { flex: 2, minHeight: 44, borderRadius: 12, backgroundColor: AppColors.brand },
+  saveButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
 });

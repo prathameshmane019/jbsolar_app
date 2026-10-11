@@ -130,8 +130,8 @@ export function EvidenceStep({ w }: { w: WorkflowController }) {
         >
           <ButtonText>
             {paymentOrder.isPending
-              ? 'Preparing Payment Authorization…'
-              : 'Proceed to Payment Authorization ›'}
+              ? 'Preparing Payment '
+              : 'Proceed to Payment›'}
           </ButtonText>
         </Button>
       </VStack>

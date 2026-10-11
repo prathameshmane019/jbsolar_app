@@ -81,7 +81,7 @@ export function CompleteStep({ w }: { w: WorkflowController }) {
                   <HStack alignItems="center" space="xs">
                     <DownloadIcon size={16} color="#ffffff" strokeWidth={2.4} />
                     <ButtonText style={styles.btnTextWhite}>
-                      {invoiceAction === 'download' ? 'Saving…' : 'Download Invoice'}
+                      {invoiceAction === 'download' ? 'Saving…' : 'Download'}
                     </ButtonText>
                   </HStack>
                 </Button>

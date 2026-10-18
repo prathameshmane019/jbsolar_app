@@ -50,13 +50,24 @@ function getDefaultApiBaseUrl(): string {
     : 'http://localhost:8080/api/v1';
 }
 
- const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
-export const apiBaseUrl = (envUrl || getDefaultApiBaseUrl()).replace(/\/+$/, '');
+function getApiBaseUrl(): string {
+  if (!envUrl) return getDefaultApiBaseUrl().replace(/\/+$/, '');
 
-if (__DEV__) {
-  console.log(`API base URL: ${apiBaseUrl} (${envUrl ? 'from .env' : 'auto-detected fallback'})`);
+  const localUrl = envUrl.match(/^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/i);
+  if (__DEV__ && Platform.OS !== 'web' && localUrl) {
+    const host = getExpoHost() ?? (Platform.OS === 'android' ? '10.0.2.2' : null);
+    if (host) {
+      return envUrl.replace(localUrl[0], `${localUrl[1]}${host}`).replace(/\/+$/, '');
+    }
+  }
+
+  return envUrl.replace(/\/+$/, '');
 }
+
+export const apiBaseUrl = getApiBaseUrl();
+
 export const api = create({
   baseURL: apiBaseUrl,
   timeout: 20000,
@@ -74,9 +85,10 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   async (error: AxiosError) => {
-
     if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
       try {
         await useAuthStore.getState().logout();
@@ -137,6 +149,28 @@ export async function searchFarmers(search: string): Promise<Farmer[]> {
     params: { page: 0, size: 20, search },
   });
   return data.content;
+}
+
+export async function getFarmersRegisteredByAgent(agentId: string): Promise<Farmer[]> {
+  if (!agentId) {
+    throw new Error('Your agent profile is unavailable. Refresh your profile and try again.');
+  }
+
+  const pageSize = 50;
+  const farmers: Farmer[] = [];
+  let page = 0;
+  let totalPages = 1;
+
+  while (page < totalPages) {
+    const { data } = await api.get<ApiPage<Farmer>>('/farmers', {
+      params: { page, size: pageSize, createdByAgentId: agentId },
+    });
+    totalPages = data.totalPages;
+    farmers.push(...data.content.filter((farmer) => farmer.createdByAgentId === agentId));
+    page += 1;
+  }
+
+  return farmers;
 }
 
 export async function createFarmer(payload: FarmerRequest): Promise<Farmer> {

@@ -135,7 +135,14 @@ export function useWorkflow() {
 
   // ── Mutations ────────────────────────────────────────────────
   const farmerSearch = useMutation({
-    mutationFn: searchFarmers,
+    mutationFn: (search: string) => {
+      const normalizedSearch = search.trim();
+      return queryClient.fetchQuery({
+        queryKey: ['farmer-search', userId, normalizedSearch],
+        queryFn: () => searchFarmers(normalizedSearch),
+        staleTime: 2 * 60_000,
+      });
+    },
     onSuccess: (records, aadhaarQuery) => {
       const exactMatch = records.find((r) => r.aadhaarNumber === aadhaarQuery);
       const match = exactMatch ?? (records.length === 1 ? records[0] : null);
@@ -154,6 +161,8 @@ export function useWorkflow() {
     onSuccess: (result) => {
       setFarmer(result);
       setStep('system');
+      void queryClient.invalidateQueries({ queryKey: ['agent-farmers'] });
+      void queryClient.invalidateQueries({ queryKey: ['farmer-search', userId] });
     },
   });
 

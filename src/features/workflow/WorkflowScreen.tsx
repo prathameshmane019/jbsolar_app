@@ -15,6 +15,7 @@ import { EvidenceStep } from './steps/EvidenceStep';
 import { FarmerStep } from './steps/FarmerStep';
 import { PaymentStep } from './steps/PaymentStep';
 import { SystemStep } from './steps/SystemStep';
+import { WorkflowOverview } from './components/WorkflowOverview';
 import { useWorkflow } from './useWorkflow';
 import { styles } from './workflow.styles';
 
@@ -36,6 +37,7 @@ export default function WorkflowScreen() {
         >
           <VStack space="md">
             <StepProgress stepIndex={stepIndex} />
+            <WorkflowOverview />
 
             {loadingResumePolicy ? (
               <Card style={styles.resultCard}>

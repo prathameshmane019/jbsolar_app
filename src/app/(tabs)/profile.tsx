@@ -20,7 +20,7 @@ import {
   UserIcon,
 } from '@/components/ui/icons';
 import { AppColors } from '@/constants/theme';
-import { apiBaseUrl, getAgentProfile, getApiErrorMessage } from '@/lib/api';
+import { getAgentProfile, getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function ProfileScreen() {

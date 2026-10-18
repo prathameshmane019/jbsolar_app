@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Platform, View, StyleSheet } from 'react-native';
 
-import { HomeIcon, PolicyIcon, UserIcon } from '@/components/ui/icons';
+import { HomeIcon, PolicyIcon, SearchIcon, UserIcon } from '@/components/ui/icons';
 import { AppColors } from '@/constants/theme';
 
 export default function AgentTabsLayout() {
@@ -44,6 +44,17 @@ export default function AgentTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="farmers/index"
+        options={{
+          title: 'Farmers',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+              <SearchIcon size={21} color={color} strokeWidth={focused ? 2.4 : 1.8} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="policies"
         options={{
           title: 'Policies',
@@ -63,6 +74,13 @@ export default function AgentTabsLayout() {
               <UserIcon size={21} color={color} strokeWidth={focused ? 2.4 : 1.8} />
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="farmers/[id]"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
@@ -88,4 +106,3 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(197, 232, 108, 0.12)',
   },
 });
-

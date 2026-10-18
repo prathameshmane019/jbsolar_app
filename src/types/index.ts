@@ -100,6 +100,27 @@ export type Invoice = {
   gstAmount: number;
   totalAmount: number;
   createdAt: string;
+  startDate?: string;
+  endDate?: string;
+  pumpPowerHp?: number;
+  motorHeadMeters?: number;
+  planName?: string;
+  planCode?: string;
+  durationMonths?: number;
+  gstPercentage?: number;
+  farmerName?: string;
+  customerCode?: string;
+  farmerMobile?: string | null;
+  farmerAddress?: string;
+  vendorName?: string;
+  vendorCode?: string;
+  vendorMobile?: string | null;
+  vendorEmail?: string | null;
+  paymentNumber?: string | null;
+  paymentMethod?: string | null;
+  gateway?: string | null;
+  gatewayPaymentId?: string | null;
+  paidAt?: string | null;
 };
 
 export type PolicyFilePurpose = 'CUSTOMER_SIGNATURE' | 'PUMP_SET_IMAGE';

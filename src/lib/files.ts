@@ -2,13 +2,12 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-import { completeFileUpload, createFileUploadUrl } from '@/lib/api';
+import { completeFileUpload, createFileUploadUrl, getApiErrorMessage } from '@/lib/api';
 import type { FileMetadata, PolicyFilePurpose } from '@/types';
 
-// top of file
-const maxFileSize = 10 * 1024 * 1024;      // keep: limit for the final upload
-const maxSourceSize = 40 * 1024 * 1024;    // new: raw camera originals can be large
-const maxImageDimension = 1280;            // was 1600
+const maxFileSize = 10 * 1024 * 1024;
+const maxSourceSize = 40 * 1024 * 1024;
+const maxImageDimension = 1280;
 
 export type LocalAttachment = {
   uri: string;
@@ -32,10 +31,9 @@ export async function optimizeImageForUpload(
   if (!source.exists) {
     throw new Error(`${attachment.name} is no longer available on this device. Select it again.`);
   }
-// in optimizeImageForUpload: check the original against the bigger limit
-if (source.size < 1 || source.size > maxSourceSize) {
-  throw new Error('Choose an image smaller than 40 MB.');
-}
+  if (source.size < 1 || source.size > maxSourceSize) {
+    throw new Error('Choose an image smaller than 40 MB.');
+  }
 
   const manipulator = ImageManipulator.manipulate(attachment.uri);
   if (attachment.width && attachment.width > maxImageDimension) {
@@ -104,50 +102,102 @@ export async function uploadAttachment(
     throw new Error('Choose an image smaller than 10 MB.');
   }
 
-  const upload = await createFileUploadUrl({
-    resourceType,
-    resourceId,
-    ...(purpose ? { purpose } : {}),
-    originalFilename: attachment.name,
-    contentType: attachment.contentType,
-    fileSize,
-  });
-  const uploadUrl = new URL(upload.uploadUrl);
-  const expiresAt = Date.parse(upload.expiresAt);
-  if (
-    uploadUrl.protocol !== 'https:' ||
-    uploadUrl.username ||
-    uploadUrl.password ||
-    uploadUrl.hash ||
-    !Number.isFinite(expiresAt) ||
-    expiresAt <= Date.now() + 15_000 ||
-    !upload.fileId
-  ) {
-    throw new Error('The backend returned an invalid or expired secure upload URL. Please retry.');
+  let stage = 'Requesting a secure upload URL from the backend';
+  try {
+    const upload = await createFileUploadUrl({
+      resourceType,
+      resourceId,
+      ...(purpose ? { purpose } : {}),
+      originalFilename: attachment.name,
+      contentType: attachment.contentType,
+      fileSize,
+    });
+
+    let uploadUrl: URL;
+    try {
+      uploadUrl = new URL(upload.uploadUrl);
+    } catch {
+      throw new Error('The backend returned a malformed upload URL.');
+    }
+    const expiresAt = Date.parse(upload.expiresAt);
+    if (
+      uploadUrl.protocol !== 'https:' ||
+      uploadUrl.username ||
+      uploadUrl.password ||
+      uploadUrl.hash ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now() + 15_000 ||
+      !upload.fileId
+    ) {
+      throw new Error('The backend returned an invalid or expired secure upload URL. Please retry.');
+    }
+
+    stage = 'Uploading the image to secure storage';
+    const response = await expoFetch(upload.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': attachment.contentType },
+      body: file,
+      redirect: 'error',
+    });
+
+    if (!response.ok) {
+      const { detail, requestId } = await getUploadFailureDetail(response);
+      throw new Error(
+        `Storage returned HTTP ${response.status}${detail ? `: ${detail}` : ''}${requestId ? ` [RequestId: ${requestId}]` : ''}.`,
+      );
+    }
+
+    stage = 'Confirming the image upload with the backend';
+    const metadata = await completeFileUpload(upload.fileId);
+    if (
+      metadata.id !== upload.fileId ||
+      metadata.resourceType !== resourceType ||
+      metadata.resourceId !== resourceId ||
+      (purpose && metadata.purpose !== purpose) ||
+      metadata.contentType !== attachment.contentType ||
+      metadata.fileSize !== fileSize
+    ) {
+      throw new Error('The backend returned file metadata that does not match this upload.');
+    }
+    return metadata;
+  } catch (error) {
+    const message = getApiErrorMessage(error).replace(/https?:\/\/[^\s"'<>]+/gi, '[URL]');
+    throw new Error(`${stage} failed: ${message}`);
+  }
+}
+
+async function getUploadFailureDetail(
+  response: Response,
+): Promise<{ detail: string; requestId: string | null }> {
+  const body = (await response.text()).trim();
+  const requestId = getStorageRequestId(response, body);
+  if (!body) return { detail: '', requestId };
+
+  try {
+    const data: unknown = JSON.parse(body);
+    if (typeof data === 'object' && data !== null) {
+      const detail = data as { code?: unknown; message?: unknown; error?: unknown };
+      const message = [detail.code, detail.message, detail.error]
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .join(': ');
+      if (message) return { detail: message, requestId };
+    }
+  } catch {
+    // Storage services often return XML instead of JSON.
   }
 
-  const response = await expoFetch(upload.uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': attachment.contentType },
-    body: file,
-    redirect: 'error',
-  });
+  const code = body.match(/<Code>([^<]+)<\/Code>/i)?.[1];
+  const message = body.match(/<Message>([^<]+)<\/Message>/i)?.[1];
+  if (code || message) return { detail: [code, message].filter(Boolean).join(': '), requestId };
 
-  if (!response.ok) {
-    throw new Error(`File upload failed (${response.status}). Please retry.`);
-  }
+  if (!body.startsWith('<')) return { detail: body, requestId };
+  return { detail: '', requestId };
+}
 
-  const metadata = await completeFileUpload(upload.fileId);
-  if (
-    metadata.id !== upload.fileId ||
-    metadata.resourceType !== resourceType ||
-    metadata.resourceId !== resourceId ||
-    (purpose && metadata.purpose !== purpose) ||
-    metadata.contentType !== attachment.contentType ||
-    metadata.fileSize !== fileSize
-  ) {
-    throw new Error('The backend returned file metadata that does not match this upload.');
-  }
+function getStorageRequestId(response: Response, body: string): string | null {
+  const headerRequestId = response.headers.get('x-amz-request-id')?.trim();
+  if (headerRequestId) return headerRequestId;
 
-  return metadata;
+  const xmlRequestId = body.match(/<(?:\w+:)?RequestId>([^<]+)<\/(?:\w+:)?RequestId>/i)?.[1]?.trim();
+  return xmlRequestId || null;
 }

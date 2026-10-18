@@ -21,14 +21,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  CameraIcon,
   CheckCircleIcon,
   ChevronRightIcon,
   ClockIcon,
   LogOutIcon,
   PlusIcon,
   PolicyIcon,
-  SearchIcon,
   SunIcon,
   ZapIcon,
 } from '@/components/ui/icons';
@@ -233,66 +231,6 @@ export default function DashboardScreen() {
                   <ButtonText style={styles.primaryActionText}>Start New Policy</ButtonText>
                 </HStack>
               </Button>
-            </VStack>
-          </Card>
-
-          {/* 4-Step Field Workflow Overview */}
-          <Card style={styles.sectionCard}>
-            <HStack alignItems="center" justifyContent="space-between" style={{ marginBottom: 14 }}>
-              <Heading size="md" style={styles.sectionHeading}>
-                Field Workflow Process
-              </Heading>
-              <Text style={styles.stepsBadge}>4 Steps</Text>
-            </HStack>
-
-            <VStack space="md">
-              <HStack style={styles.workflowRow} alignItems="center" space="md">
-                <View style={[styles.stepIconWrap, { backgroundColor: '#e0f2fe' }]}>
-                  <SearchIcon size={16} color="#0369a1" strokeWidth={2.2} />
-                </View>
-                <VStack style={styles.workflowCopy} space="xs">
-                  <Text style={styles.stepTitle}>1. Farmer KYC</Text>
-                  <Text style={styles.stepDescription}>
-                    Instant Aadhaar search or quick form registration for new farmers.
-                  </Text>
-                </VStack>
-              </HStack>
-
-              <HStack style={styles.workflowRow} alignItems="center" space="md">
-                <View style={[styles.stepIconWrap, { backgroundColor: '#fef3c7' }]}>
-                  <ZapIcon size={16} color="#b45309" strokeWidth={2.2} />
-                </View>
-                <VStack style={styles.workflowCopy} space="xs">
-                  <Text style={styles.stepTitle}>2. Pump Set & Plan</Text>
-                  <Text style={styles.stepDescription}>
-                    Capture pump capacity (HP), head in meters, and policy plan terms.
-                  </Text>
-                </VStack>
-              </HStack>
-
-              <HStack style={styles.workflowRow} alignItems="center" space="md">
-                <View style={[styles.stepIconWrap, { backgroundColor: '#e0e7ff' }]}>
-                  <CameraIcon size={16} color="#4338ca" strokeWidth={2.2} />
-                </View>
-                <VStack style={styles.workflowCopy} space="xs">
-                  <Text style={styles.stepTitle}>3. Signature & Evidence</Text>
-                  <Text style={styles.stepDescription}>
-                    Digital customer touch signature and camera photo uploaded to Cloudflare R2.
-                  </Text>
-                </VStack>
-              </HStack>
-
-              <HStack style={styles.workflowRow} alignItems="center" space="md">
-                <View style={[styles.stepIconWrap, { backgroundColor: '#dcfce7' }]}>
-                  <CheckCircleIcon size={16} color="#15803d" strokeWidth={2.2} />
-                </View>
-                <VStack style={styles.workflowCopy} space="xs">
-                  <Text style={styles.stepTitle}>4. Payment & Invoice</Text>
-                  <Text style={styles.stepDescription}>
-                    Verified policy activation and downloadable PDF invoice for the farmer.
-                  </Text>
-                </VStack>
-              </HStack>
             </VStack>
           </Card>
 
@@ -574,38 +512,6 @@ const styles = StyleSheet.create({
     color: AppColors.brand,
     fontSize: 16,
     fontWeight: '800',
-  },
-  stepsBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: AppColors.textMuted,
-    backgroundColor: AppColors.bg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  workflowRow: {
-    alignItems: 'center',
-  },
-  stepIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  workflowCopy: {
-    flex: 1,
-  },
-  stepTitle: {
-    color: AppColors.brand,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  stepDescription: {
-    color: AppColors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
   },
   seeAllButton: {
     paddingVertical: 2,

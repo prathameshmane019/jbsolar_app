@@ -30,12 +30,10 @@ const TONES: Record<Tone, { fg: string; bg: string; border: string }> = {
 export default function UpdateScreen() {
   const router = useRouter();
   const {
-    currentlyRunning,
     isUpdateAvailable,
     isUpdatePending,
     isChecking,
     isDownloading,
-    lastCheckForUpdateTimeSinceRestart,
   } = Updates.useUpdates();
 
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +44,19 @@ export default function UpdateScreen() {
 
   const handleCheck = async () => {
     setError(null);
+    setCheckedOnce(false);
+
+    if (__DEV__ || !Updates.isEnabled) {
+      return;
+    }
+
     try {
       await Updates.checkForUpdateAsync();
       setCheckedOnce(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to check for updates.');
+    } catch {
+      setError(
+        'The update service could not be reached. Check your internet connection and try again. If the problem continues, ask your administrator to verify this build’s update channel and that an update is published for its app version.',
+      );
     }
   };
 
@@ -60,9 +66,9 @@ export default function UpdateScreen() {
       await Updates.fetchUpdateAsync();
       setRestarting(true);
       await Updates.reloadAsync();
-    } catch (e) {
+    } catch {
       setRestarting(false);
-      setError(e instanceof Error ? e.message : 'Failed to download the update.');
+      setError('We could not download the update. Please try again when you have a stable connection.');
     }
   };
 
@@ -71,9 +77,9 @@ export default function UpdateScreen() {
     try {
       setRestarting(true);
       await Updates.reloadAsync();
-    } catch (e) {
+    } catch {
       setRestarting(false);
-      setError(e instanceof Error ? e.message : 'Failed to restart the app.');
+      setError('The app could not restart to apply the update. Please close and reopen the app.');
     }
   };
 
@@ -94,6 +100,15 @@ export default function UpdateScreen() {
     statusText = 'Restarting…';
     statusTone = 'info';
     buttonLabel = 'Restarting…';
+  } else if (!Updates.isEnabled) {
+    statusText = 'Updates are unavailable';
+    buttonLabel = 'Updates unavailable';
+  } else if (__DEV__) {
+    statusText = 'Check in an installed app build';
+    buttonLabel = 'Not available in development';
+  } else if (error) {
+    statusText = 'Could not check for updates';
+    statusTone = 'error';
   } else if (isUpdatePending) {
     statusText = 'Update ready to install';
     statusTone = 'success';
@@ -148,12 +163,6 @@ export default function UpdateScreen() {
                 <Heading size="md" style={[styles.statusTitle, { color: tone.fg }]}>
                   {statusText}
                 </Heading>
-                <Text style={styles.vendorSubtitle}>
-                  Last checked:{' '}
-                  {lastCheckForUpdateTimeSinceRestart
-                    ? lastCheckForUpdateTimeSinceRestart.toLocaleTimeString()
-                    : 'Never'}
-                </Text>
               </VStack>
             </HStack>
           </Card>
@@ -169,36 +178,6 @@ export default function UpdateScreen() {
             <VStack space="sm" style={styles.detailGrid}>
               <Detail label="App Version" value={Application.nativeApplicationVersion ?? '-'} />
               <Detail label="Build Number" value={Application.nativeBuildVersion ?? '-'} />
-              <Detail label="Runtime Version" value={String(Updates.runtimeVersion ?? '-')} />
-              <Detail label="Channel" value={Updates.channel ?? '-'} />
-            </VStack>
-          </Card>
-
-          {/* Update Details Card */}
-          <Card style={styles.card}>
-            <HStack alignItems="center" space="xs" style={styles.cardHeader}>
-              <SunIcon size={16} color={AppColors.brand} strokeWidth={2.2} />
-              <Heading size="sm" style={styles.cardHeading}>
-                Current Update
-              </Heading>
-            </HStack>
-            <VStack space="sm" style={styles.detailGrid}>
-              <Detail
-                label="Update ID"
-                value={
-                  currentlyRunning.updateId
-                    ? `${currentlyRunning.updateId.slice(0, 8)}…`
-                    : 'Embedded build'
-                }
-              />
-              <Detail
-                label="Published"
-                value={
-                  currentlyRunning.createdAt
-                    ? currentlyRunning.createdAt.toLocaleString()
-                    : '-'
-                }
-              />
             </VStack>
           </Card>
 
@@ -208,19 +187,17 @@ export default function UpdateScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </Card>
           ) : null}
-
-          {!Updates.isEnabled ? (
-            <Text style={styles.hintText}>
-              Updates are disabled in development and Expo Go. Use a preview or production build
-              to test.
+          {__DEV__ ? (
+            <Text style={styles.availabilityHint}>
+              Update checks are available in installed preview or production builds.
             </Text>
           ) : null}
 
           {/* Action Button */}
           <Button
             onPress={onPress}
-            isDisabled={busy || !Updates.isEnabled}
-            style={[styles.actionButton, (busy || !Updates.isEnabled) && { opacity: 0.6 }]}
+            isDisabled={busy || !Updates.isEnabled || __DEV__}
+            style={[styles.actionButton, (busy || !Updates.isEnabled || __DEV__) && { opacity: 0.6 }]}
           >
             <HStack alignItems="center" space="sm">
               {busy ? <ActivityIndicator color={AppColors.accent} size="small" /> : null}
@@ -358,7 +335,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  hintText: {
+  availabilityHint: {
     color: AppColors.textMuted,
     fontSize: 12,
     lineHeight: 18,

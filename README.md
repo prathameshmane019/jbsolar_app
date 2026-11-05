@@ -20,6 +20,17 @@ For native development, if `EXPO_PUBLIC_API_URL` is set to `localhost` or `127.0
 
 If Expo is started in tunnel mode, the backend is on a different host, or you are building for production, set `EXPO_PUBLIC_API_URL` to a backend URL reachable from the device, including `/api/v1` (for example, `https://api.example.com/api/v1` for production), then restart Expo with a cleared cache (`npx expo start --clear`). A Metro tunnel does not expose the backend. Verify local phone-to-backend connectivity by opening `http://<computer-lan-ip>:8080/v3/api-docs` in the phone browser.
 
+## EAS production builds and updates
+
+Set `EXPO_PUBLIC_API_URL` as a plain-text variable in the EAS `production` environment. This URL is embedded in the client app and is not a secret. The production build profile explicitly uses that EAS environment. Publish production OTA updates with both the `production` channel and environment:
+
+```bash
+npx eas-cli@latest env:set --name EXPO_PUBLIC_API_URL --value https://api.example.com/api/v1 --environment production --visibility plaintext
+npx eas-cli@latest update --channel production --environment production --message "Describe the change"
+```
+
+The backend must be publicly reachable over HTTPS from the device. Do not publish an update from a local `.env` that points to `localhost`.
+
 The local config plugin permits HTTP for generated development builds; config plugins do not modify the Expo Go app itself. Use HTTPS outside local development.
 
 Agents sign in with their registered mobile number and password. Only API responses with role `VENDOR_AGENT` are accepted. Native builds store access tokens in Expo SecureStore. Expo SecureStore does not support web, so browser sessions are kept in memory only and require signing in again after a page refresh.

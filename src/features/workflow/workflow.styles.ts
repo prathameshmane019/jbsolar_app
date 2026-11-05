@@ -8,7 +8,9 @@ import { AppColors } from '@/constants/theme';
 export const styles = StyleSheet.create({
   // ── Screen / header ────────────────────────────────────────────
   safeArea: { flex: 1, backgroundColor: AppColors.bg },
+  keyboardAvoidingView: { flex: 1 },
   screen: { flex: 1, paddingHorizontal: 18, paddingTop: 10 },
+  scrollView: { flex: 1 },
   topbar: { alignItems: 'center', paddingVertical: 6 },
   topLogo: {
     width: 36, height: 36, borderRadius: 11, backgroundColor: '#fffbeb',
@@ -20,7 +22,7 @@ export const styles = StyleSheet.create({
     height: 38, width: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
     backgroundColor: AppColors.surface, borderWidth: 1, borderColor: AppColors.border,
   },
-  scrollContent: { paddingBottom: 32 },
+  scrollContent: { flexGrow: 1, paddingBottom: 32 },
 
   // ── Step progress ──────────────────────────────────────────────
   progressCard: {

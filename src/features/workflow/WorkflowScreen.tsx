@@ -3,10 +3,11 @@
  *   export { default } from '@/features/workflow/WorkflowScreen';
  */
 import { Button, ButtonText, Card, Heading, HStack, ScrollView, Text, VStack } from '@gluestack-ui/themed';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CheckIcon, CloseIcon, SunIcon } from '@/components/ui/icons';
+import { CheckIcon, CloseIcon } from '@/components/ui/icons';
 import { AppColors } from '@/constants/theme';
 
 import { workflowSteps } from './helpers';
@@ -25,47 +26,55 @@ export default function WorkflowScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <VStack style={styles.screen} space="md">
-        <WorkflowHeader onClose={() => w.router.back()} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <VStack style={styles.screen} space="md">
+          <WorkflowHeader onClose={() => w.router.back()} />
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={w.scrollEnabled}
-          keyboardShouldPersistTaps="handled"
-          nestedScrollEnabled
-        >
-          <VStack space="md">
-            <StepProgress stepIndex={stepIndex} />
-            <WorkflowOverview />
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={w.scrollEnabled}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            <VStack space="md">
+              <StepProgress stepIndex={stepIndex} />
+              <WorkflowOverview />
 
-            {loadingResumePolicy ? (
-              <Card style={styles.resultCard}>
-                <HStack alignItems="center" space="sm" justifyContent="center">
-                  <ActivityIndicator color={AppColors.brand} size="small" />
-                  <Text style={styles.mutedText}>Loading policy details…</Text>
-                </HStack>
-              </Card>
-            ) : (
-              <>
-                {step === 'farmer' && <FarmerStep w={w} />}
-                {step === 'system' && <SystemStep w={w} />}
-                {step === 'evidence' && <EvidenceStep w={w} />}
-                {step === 'payment' && <PaymentStep w={w} />}
-                {step === 'complete' && <CompleteStep w={w} />}
+              {loadingResumePolicy ? (
+                <Card style={styles.resultCard}>
+                  <HStack alignItems="center" space="sm" justifyContent="center">
+                    <ActivityIndicator color={AppColors.brand} size="small" />
+                    <Text style={styles.mutedText}>Loading policy details…</Text>
+                  </HStack>
+                </Card>
+              ) : (
+                <>
+                  {step === 'farmer' && <FarmerStep w={w} />}
+                  {step === 'system' && <SystemStep w={w} />}
+                  {step === 'evidence' && <EvidenceStep w={w} />}
+                  {step === 'payment' && <PaymentStep w={w} />}
+                  {step === 'complete' && <CompleteStep w={w} />}
 
-                {step !== 'payment' && step !== 'complete' && (
-                  <StepNav
-                    stepIndex={stepIndex}
-                    disabled={w.policyCreation.isPending || w.policyUpdate.isPending}
-                    onBack={w.goBack}
-                  />
-                )}
-              </>
-            )}
-          </VStack>
-        </ScrollView>
-      </VStack>
+                  {step !== 'payment' && step !== 'complete' && (
+                    <StepNav
+                      stepIndex={stepIndex}
+                      disabled={w.policyCreation.isPending || w.policyUpdate.isPending}
+                      onBack={w.goBack}
+                    />
+                  )}
+                </>
+              )}
+            </VStack>
+          </ScrollView>
+        </VStack>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -74,9 +83,12 @@ function WorkflowHeader({ onClose }: { onClose: () => void }) {
   return (
     <HStack style={styles.topbar} alignItems="center" justifyContent="space-between">
       <HStack alignItems="center" space="sm">
-        <View style={styles.topLogo}>
-          <SunIcon size={20} color="#f59e0b" strokeWidth={2.4} />
-        </View>
+        <Image
+          source={require('@/assets/jb-solar-app-icon-1024.png')}
+          contentFit="cover"
+          accessibilityLabel="JB Solar"
+          style={styles.topLogo}
+        />
         <VStack space="xs">
           <Text style={styles.eyebrow}>FIELD REGISTRATION</Text>
           <Heading size="md" style={styles.heading}>Solar Pump Policy</Heading>

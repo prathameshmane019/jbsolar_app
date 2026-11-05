@@ -10,6 +10,7 @@ import {
 } from '@gluestack-ui/themed';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   Alert,
@@ -108,9 +109,12 @@ export default function DashboardScreen() {
           {/* Top Bar / Header */}
           <HStack alignItems="center" justifyContent="space-between" style={styles.topbar}>
             <HStack alignItems="center" space="sm">
-              <View style={styles.avatarCircle}>
-                <SunIcon size={22} color="#f59e0b" strokeWidth={2.4} />
-              </View>
+              <Image
+                source={require('@/assets/jb-solar-app-icon-1024.png')}
+                contentFit="cover"
+                accessibilityLabel="JB Solar"
+                style={styles.avatarCircle}
+              />
               <VStack space="xs">
                 <Text style={styles.greetingKicker}>JB SOLAR · FIELD DESK</Text>
                 <Heading size="lg" style={styles.agentName} numberOfLines={1}>

@@ -53,7 +53,8 @@ export default function UpdateScreen() {
     try {
       await Updates.checkForUpdateAsync();
       setCheckedOnce(true);
-    } catch {
+    } catch (error) {
+      console.error('Could not check for EAS updates.', error);
       setError(
         'The update service could not be reached. Check your internet connection and try again. If the problem continues, ask your administrator to verify this build’s update channel and that an update is published for its app version.',
       );
@@ -66,7 +67,8 @@ export default function UpdateScreen() {
       await Updates.fetchUpdateAsync();
       setRestarting(true);
       await Updates.reloadAsync();
-    } catch {
+    } catch (error) {
+      console.error('Could not download the EAS update.', error);
       setRestarting(false);
       setError('We could not download the update. Please try again when you have a stable connection.');
     }
@@ -77,7 +79,8 @@ export default function UpdateScreen() {
     try {
       setRestarting(true);
       await Updates.reloadAsync();
-    } catch {
+    } catch (error) {
+      console.error('Could not restart to apply the EAS update.', error);
       setRestarting(false);
       setError('The app could not restart to apply the update. Please close and reopen the app.');
     }
@@ -178,6 +181,8 @@ export default function UpdateScreen() {
             <VStack space="sm" style={styles.detailGrid}>
               <Detail label="App Version" value={Application.nativeApplicationVersion ?? '-'} />
               <Detail label="Build Number" value={Application.nativeBuildVersion ?? '-'} />
+              <Detail label="Update Channel" value={Updates.channel ?? 'Not configured'} />
+              <Detail label="Runtime Version" value={Updates.runtimeVersion ?? 'Not provided'} />
             </VStack>
           </Card>
 
